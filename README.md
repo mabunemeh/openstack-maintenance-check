@@ -1,5 +1,7 @@
 # openstack-maintenance-check
 
+[![CI](https://github.com/mabunemeh/openstack-maintenance-check/actions/workflows/ci.yml/badge.svg)](https://github.com/mabunemeh/openstack-maintenance-check/actions/workflows/ci.yml)
+
 Explain what needs attention before moving workloads off an OpenStack compute
 host for maintenance.
 
@@ -10,9 +12,11 @@ are planned in the [phased implementation plan](docs/PLAN.md).
 
 ## Run the demo
 
-Requires Python 3.11+. From this repository:
+Requires Python 3.11+. Clone and install from source:
 
 ```sh
+git clone https://github.com/mabunemeh/openstack-maintenance-check.git
+cd openstack-maintenance-check
 python -m pip install .
 maintenance-check demo
 maintenance-check demo --scenario incomplete --format json
@@ -93,8 +97,9 @@ pre-commit run --all-files
 
 The package uses the Python standard library at runtime. Tests exercise input
 validation, rule behavior, output contracts, and CLI exit codes without a cloud.
-CI is configured for Linux on Python 3.11–3.14 and Windows on Python 3.12.
-Configured CI is not a claim that a hosted run has already passed.
+CI covers Linux on Python 3.11–3.14 and Windows on Python 3.12. See the
+[CI history](https://github.com/mabunemeh/openstack-maintenance-check/actions/workflows/ci.yml)
+for hosted validation. These tests do not contact a real OpenStack cloud.
 
 Layout: `snapshot.py` validates evidence, `models.py` defines immutable types,
 `checks.py` evaluates pure rules, `reporting.py` renders the report, and `cli.py`

@@ -312,3 +312,16 @@ separately below; later implementation phases are not started.
 **Next discrete change:** Phase 2A — verify the SDK adapter contract and implement
 read-only Nova host/service and all-project server collection, preserving the
 existing offline execution path and evidence semantics.
+
+### 2026-09-05 — Phase 1 published to GitHub
+
+Published the first phase on the `main` branch of the public
+[mabunemeh/openstack-maintenance-check repository](https://github.com/mabunemeh/openstack-maintenance-check).
+The initial implementation commit is
+[`fb840fb`](https://github.com/mabunemeh/openstack-maintenance-check/commit/fb840fbd775a6eba4f4c7dad07c021ad6943aa47).
+
+Hosted CI runs the five platform/Python combinations, package build and installed
+demo checks, repository hooks, and committed-history secret scanning. Its
+[run history](https://github.com/mabunemeh/openstack-maintenance-check/actions/workflows/ci.yml)
+records results for each pushed revision. No PyPI release, version tag, profile
+edit, or live-cloud integration validation is part of this publication.
