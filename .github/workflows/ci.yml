@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.11", "3.12", "3.13", "3.14"]
+        include:
+          - os: windows-latest
+            python: "3.12"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m ruff check .
+      - run: python -m ruff format --check .
+      - run: python -m pytest
+      - run: python -m build
+      - name: Install wheel and verify packaged demos outside checkout
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/maintenance-smoke"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            smoke_python="$RUNNER_TEMP/maintenance-smoke/Scripts/python.exe"
+          else
+            smoke_python="$RUNNER_TEMP/maintenance-smoke/bin/python"
+          fi
+          "$smoke_python" -m pip install --no-deps dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$smoke_python" -m openstack_maintenance_check demo --scenario clear --format json
+          set +e
+          "$smoke_python" -m openstack_maintenance_check demo --scenario blocked
+          result=$?
+          set -e
+          test "$result" -eq 1
+
+  hooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pre-commit
+      - run: pre-commit run --all-files
+      # The normal gitleaks hook inspects staged changes. CI has no staged
+      # changes, so scan committed history explicitly as well.
+      - run: pre-commit run gitleaks-history --hook-stage manual --all-files

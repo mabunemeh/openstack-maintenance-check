@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-09-05T08:00:00Z",
+  "host": {"name": "compute-demo-01", "state": "up", "status": "disabled"},
+  "servers_complete": true,
+  "servers": [
+    {
+      "id": "server-demo-error",
+      "name": "demo-database",
+      "host": "compute-demo-01",
+      "status": "ERROR",
+      "task_state": null
+    },
+    {
+      "id": "server-demo-busy",
+      "name": "demo-worker",
+      "host": "compute-demo-01",
+      "status": "ACTIVE",
+      "task_state": "image_snapshot"
+    },
+    {
+      "id": "server-demo-stopped",
+      "name": "demo-batch",
+      "host": "compute-demo-01",
+      "status": "SHUTOFF",
+      "task_state": null
+    }
+  ]
+}

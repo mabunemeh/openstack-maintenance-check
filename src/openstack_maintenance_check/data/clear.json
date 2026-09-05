@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-09-05T08:00:00Z",
+  "host": {"name": "compute-demo-01", "state": "up", "status": "disabled"},
+  "servers_complete": true,
+  "servers": [
+    {
+      "id": "server-demo-idle",
+      "name": "demo-web",
+      "host": "compute-demo-01",
+      "status": "ACTIVE",
+      "task_state": null
+    }
+  ]
+}

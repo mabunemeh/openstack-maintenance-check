@@ -1,0 +1,17 @@
+.venv/
+.venv-*/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage*
+htmlcov/
+*.egg-info/
+dist/
+build/
+.env
+clouds.yaml
+secure.yaml
+snapshots/
+reports/
+.test-tmp/

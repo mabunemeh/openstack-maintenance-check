@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-09-05T08:00:00Z",
+  "host": {"name": "compute-demo-01", "status": "disabled"},
+  "servers_complete": false,
+  "servers": [
+    {
+      "id": "server-demo-partial",
+      "name": "demo-unknown",
+      "host": "compute-demo-01",
+      "status": "ACTIVE"
+    }
+  ]
+}
