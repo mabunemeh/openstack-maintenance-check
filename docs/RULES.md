@@ -1,4 +1,4 @@
-# Phase 1 rule semantics
+# Rule semantics
 
 Scope: preliminary review before moving workloads off a functioning source host
 for planned maintenance. These rules do not perform Nova migration prechecks.
@@ -46,6 +46,24 @@ to migrate it.
 An instance may produce both a status finding and a task finding. These explain
 two separate pieces of evidence; summary counts are findings, not VM counts.
 
+## collection.issues
+
+For version-2 evidence, each recorded collection issue produces an unknown
+finding with a fixed explanation and next check. Missing host placement or IDs,
+wrong-host rows, duplicate IDs, malformed task states, request failures, and
+incomplete pagination cannot silently become a complete inventory. Known
+host-matching rows are retained on a later failure. Collection failure before
+the source host is resolved exits 3 instead of inventing a host report.
+
+## evidence.freshness
+
+Normal `check` commands require evidence no older than `--max-age-seconds`
+(default 300). Age is measured from collection start, so a long collection does
+not look newly captured at its end. A capture/completion timestamp more than 30
+seconds in the future also produces unknown evidence. The threshold is a
+positive integer. `--historical` skips this check for snapshot replay only; it
+cannot override collection problems, status findings, or missing fields.
+
 ## Outcome and coverage
 
 Blockers set outcome `blocked`; otherwise unknowns set `incomplete`; otherwise
@@ -53,9 +71,11 @@ warnings set `attention_required`; otherwise the outcome is `no_known_blockers`.
 Exit 1 covers all three finding categories. Each report carries all findings,
 even when one category determines the headline outcome.
 
-Every report lists four `checks_run` entries; a server check over an empty
-inventory has no server evidence to inspect. Unimplemented migration checks
-are always listed in limitations, never counted as passing checks.
+Every report lists the four baseline `checks_run` entries. Version-2 evidence
+also runs `collection.issues`; non-historical checks also run `evidence.freshness`.
+A server check over an empty inventory has no server evidence to inspect.
+Unimplemented migration checks are always listed in limitations, never counted
+as passing checks.
 
 ## Sources
 

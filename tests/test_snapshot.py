@@ -36,7 +36,7 @@ def test_invalid_json_or_root(raw):
         parse_snapshot(raw)
 
 
-@pytest.mark.parametrize("version", [True, False, 1.0, "1", 0, 2, None])
+@pytest.mark.parametrize("version", [True, False, 1.0, "1", 0, 3, None])
 def test_invalid_schema_versions(inventory, version):
     inventory["schema_version"] = version
     with pytest.raises(SnapshotError, match="schema_version"):

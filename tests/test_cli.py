@@ -24,8 +24,8 @@ def test_demo_contract(scenario, code, outcome, summary, capsys):
     output = capsys.readouterr()
     assert output.err == ""
     data = json.loads(output.out)
-    assert data["report_schema_version"] == 1
-    assert data["analysis_mode"] == "snapshot"
+    assert data["report_schema_version"] == 2
+    assert data["analysis_mode"] == "historical"
     assert data["outcome"] == outcome
     assert data["summary"] == summary
     assert len(data["checks_run"]) == 4
@@ -49,7 +49,7 @@ def test_demo_defaults_to_blocked_text(capsys):
 def test_file_check(inventory, tmp_path, capsys):
     path = tmp_path / "inventory.json"
     path.write_text(json.dumps(inventory), encoding="utf-8")
-    assert main(["check", "--snapshot", str(path), "--format", "json"]) == 0
+    assert main(["check", "--snapshot", str(path), "--format", "json", "--historical"]) == 0
     data = json.loads(capsys.readouterr().out)
     assert data["captured_at"] == "2026-09-05T08:00:00+00:00"
     assert data["inventory"]["servers"][0]["task_state_known"] is True
@@ -138,7 +138,7 @@ def test_demo_and_file_use_same_pipeline(tmp_path, capsys):
     path.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
     assert main(["demo", "--format", "json"]) == 1
     demo = capsys.readouterr().out
-    assert main(["check", "--snapshot", str(path), "--format", "json"]) == 1
+    assert main(["check", "--snapshot", str(path), "--format", "json", "--historical"]) == 1
     assert capsys.readouterr().out == demo
 
 

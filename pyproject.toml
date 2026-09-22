@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openstack-maintenance-check"
-version = "0.1.0.dev0"
+version = "0.2.0.dev0"
 description = "Explain source-host maintenance blockers from OpenStack inventory evidence"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -23,7 +23,9 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov>=5", "ruff==0.15.20", "build>=1.2", "pre-commit>=4"]
+live = ["openstacksdk>=4.17,<5"]
+dev = ["pytest>=8", "pytest-cov>=5", "ruff==0.15.20", "build>=1.2", "pre-commit>=4",
+       "openstacksdk>=4.17,<5", "requests-mock>=1.12"]
 
 [project.scripts]
 maintenance-check = "openstack_maintenance_check.cli:main"
@@ -32,7 +34,7 @@ maintenance-check = "openstack_maintenance_check.cli:main"
 packages = ["src/openstack_maintenance_check"]
 
 [tool.hatch.build.targets.sdist]
-include = ["/src", "/tests", "/docs", "/README.md", "/LICENSE", "/pyproject.toml"]
+include = ["/src", "/tests", "/docs", "/scripts", "/README.md", "/LICENSE", "/pyproject.toml"]
 
 [tool.ruff]
 line-length = 100

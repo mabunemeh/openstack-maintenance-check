@@ -5,8 +5,9 @@ These are review rules, not Nova scheduler or hypervisor migration prechecks.
 """
 
 from collections.abc import Callable, Iterable
+from datetime import UTC, datetime
 
-from .models import Finding, Report, Severity, Snapshot
+from .models import COLLECTION_ISSUES, Finding, Report, Severity, Snapshot
 
 TRANSITION_STATUSES = frozenset(
     {
@@ -151,9 +152,57 @@ CHECKS: tuple[tuple[str, Callable[[Snapshot], Iterable[Finding]]], ...] = (
 )
 
 
-def evaluate(snapshot: Snapshot) -> Report:
+def collection_issues(snapshot: Snapshot) -> Iterable[Finding]:
+    if snapshot.collection:
+        for code in snapshot.collection.issues:
+            yield Finding(
+                "collection.issues",
+                Severity.UNKNOWN,
+                "host",
+                snapshot.host.name,
+                COLLECTION_ISSUES[code],
+                (("issue_code", code),),
+                "Resolve collection or visibility problems, then collect a new inventory.",
+            )
+
+
+def evaluate(
+    snapshot: Snapshot,
+    *,
+    historical: bool = True,
+    live: bool = False,
+    now: datetime | None = None,
+    max_age_seconds: int = 300,
+) -> Report:
+    """Evaluate capture-time evidence; CLI checks enable freshness by default."""
+    if max_age_seconds <= 0:
+        raise ValueError("max_age_seconds must be positive")
+    historical = historical and not live
+    evaluated_at = None if historical else (now or datetime.now(UTC))
+    checks = list(CHECKS)
+    if snapshot.collection:
+        checks.append(("collection.issues", collection_issues))
     priority = {Severity.BLOCKER: 0, Severity.UNKNOWN: 1, Severity.WARNING: 2}
-    findings = (finding for _, check in CHECKS for finding in check(snapshot))
+    findings = [finding for _, check in checks for finding in check(snapshot)]
+    checks_run = [name for name, _ in checks]
+    if evaluated_at:
+        checks_run.append("evidence.freshness")
+        age = (evaluated_at - snapshot.captured_at).total_seconds()
+        completed = (
+            snapshot.collection.completed_at if snapshot.collection else snapshot.captured_at
+        )
+        if age > max_age_seconds or (completed - evaluated_at).total_seconds() > 30:
+            findings.append(
+                Finding(
+                    "evidence.freshness",
+                    Severity.UNKNOWN,
+                    "host",
+                    snapshot.host.name,
+                    "Evidence is stale or dated in the future; current state is unconfirmed.",
+                    (("captured_at", snapshot.captured_at.isoformat()),),
+                    "Collect fresh evidence and verify clocks; --historical is for past analysis.",
+                )
+            )
     ordered = tuple(
         sorted(
             findings,
@@ -166,4 +215,23 @@ def evaluate(snapshot: Snapshot) -> Report:
             ),
         )
     )
-    return Report(snapshot, ordered, tuple(name for name, _ in CHECKS), LIMITATIONS)
+    limitations = list(LIMITATIONS)
+    if not historical:
+        limitations[1] = (
+            "Freshness is measured from collection start; collection is not atomic and "
+            "cloud state can change after observation."
+        )
+    if live:
+        limitations[2] = (
+            "All-project inventory was requested; completeness depends on Nova policy and "
+            "successful collection, not an independent cloud-wide census."
+        )
+    return Report(
+        snapshot,
+        ordered,
+        tuple(checks_run),
+        tuple(limitations),
+        "live" if live else "historical" if historical else "snapshot",
+        evaluated_at,
+        None if historical else max_age_seconds,
+    )
