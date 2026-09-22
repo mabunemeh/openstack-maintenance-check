@@ -15,9 +15,14 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python: ["3.11", "3.12", "3.13", "3.14"]
+        sdk: [latest]
         include:
           - os: windows-latest
             python: "3.12"
+            sdk: latest
+          - os: ubuntu-latest
+            python: "3.11"
+            sdk: "4.17.0"
     steps:
       - uses: actions/checkout@v6
         with:
@@ -26,6 +31,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -e ".[dev]"
+      - name: Verify supported minimum SDK
+        if: matrix.sdk != 'latest'
+        run: python -m pip install "openstacksdk==${{ matrix.sdk }}"
       - run: python -m ruff check .
       - run: python -m ruff format --check .
       - run: python -m pytest
@@ -41,12 +49,18 @@ jobs:
           fi
           "$smoke_python" -m pip install --no-deps dist/*.whl
           cd "$RUNNER_TEMP"
+          "$smoke_python" -c "import importlib.util; assert importlib.util.find_spec('openstack') is None"
           "$smoke_python" -m openstack_maintenance_check demo --scenario clear --format json
           set +e
           "$smoke_python" -m openstack_maintenance_check demo --scenario blocked
           result=$?
           set -e
           test "$result" -eq 1
+          set +e
+          "$smoke_python" -m openstack_maintenance_check check --cloud demo --host compute-demo
+          result=$?
+          set -e
+          test "$result" -eq 3
 
   hooks:
     runs-on: ubuntu-latest

@@ -325,3 +325,49 @@ demo checks, repository hooks, and committed-history secret scanning. Its
 [run history](https://github.com/mabunemeh/openstack-maintenance-check/actions/workflows/ci.yml)
 records results for each pushed revision. No PyPI release, version tag, profile
 edit, or live-cloud integration validation is part of this publication.
+
+### 2026-09-22 — Phase 2 implementation; lab gate pending
+
+Implemented locally on `feat/live-nova-collection`:
+
+- **2A:** optional `live` dependency, named-profile SDK connection, exact source
+  service resolution, and host-filtered all-project Nova pagination. Requests
+  use the public authenticated Compute adapter with microversion 2.1 and retain
+  original JSON field presence; normalized SDK resource defaults would otherwise
+  erase the missing-vs-null task-state distinction. No SDK private fields are used.
+- **2B:** partial evidence and fixed collection issue codes, sanitized error
+  messages, collection timing/API metadata, freshness checks, historical replay,
+  and explicit allowlisted snapshot export that refuses to overwrite files.
+- Input schema 2 adds collection metadata; schema-1 snapshots remain readable.
+  Output schema advances to 2. Normal snapshot checks now enforce a default
+  300-second age limit; demos remain historical and explicit `--historical`
+  preserves capture-time replay behavior.
+- Added `docs/LIVE.md`, migration notes in the README/schema/rule documents,
+  and a runnable offline lab inventory comparison helper. CI adds minimum-SDK
+  coverage and verifies that a wheel installed without the SDK still runs demos
+  and reports an actionable error for live commands.
+
+Local verification on Windows/Python 3.12.10:
+
+- 257 tests passed with openstacksdk 4.20.0 and again with the supported minimum
+  4.17.0. Combined statement/branch coverage: 99.53%.
+- Contract tests use the actual SDK connection/HTTP adapter with synthetic Nova
+  responses. They verify request scope, microversion, pagination, partial rows,
+  missing attributes, 401/403 errors, timeouts, malformed responses, cache bypass,
+  redirect handling, export/replay, and CLI exit behavior.
+- SDK internal deprecation warnings were observed and recorded in the workspace
+  contribution log. They are not test failures or migration findings.
+- Ruff lint/format, YAML, whitespace, large-file, and staged-secret hooks passed.
+  Wheel and source distribution built successfully. The wheel installed without
+  dependencies into a separate environment and ran all three demos outside the
+  checkout; live mode without the SDK returned the documented exit-3 diagnostic.
+
+**Gate still pending:** a real disposable-cloud inventory comparison using the
+instructions in `docs/LIVE.md`. No cloud credentials or host were supplied for
+this implementation, and no live environment was contacted. Hosted CI for this
+phase will run when the branch is published; local mocked contract tests do not
+certify a Nova release. Phase 3 has not started.
+
+**Design limits:** microversion 2.1 is the bounded initial contract. API visibility
+still depends on deployment policy, cell availability, and concurrent changes;
+successful pagination is not an independent census or migration precheck.

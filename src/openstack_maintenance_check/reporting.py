@@ -6,15 +6,24 @@ from typing import Any
 
 from . import __version__
 from .models import Report, Severity
+from .snapshot import snapshot_dict
 
 
 def report_dict(report: Report) -> dict[str, Any]:
     snapshot = report.snapshot
     return {
-        "report_schema_version": 1,
+        "report_schema_version": 2,
         "tool_version": __version__,
-        "analysis_mode": "snapshot",
+        "analysis_mode": report.analysis_mode,
         "captured_at": snapshot.captured_at.isoformat(),
+        "collection": snapshot_dict(snapshot).get("collection"),
+        "freshness": {
+            "evaluated_at": report.evaluated_at.isoformat() if report.evaluated_at else None,
+            "max_age_seconds": report.max_age_seconds,
+            "age_seconds": (report.evaluated_at - snapshot.captured_at).total_seconds()
+            if report.evaluated_at
+            else None,
+        },
         "host": asdict(snapshot.host),
         "inventory": {
             "servers_complete": snapshot.servers_complete,
@@ -43,10 +52,15 @@ def render_text(report: Report) -> str:
     # JSON quoting preserves identifiers while escaping newlines, ESC, bidi controls,
     # and non-ASCII input. Dynamic values cannot inject terminal commands or headings.
     host = json.dumps(report.snapshot.host.name, ensure_ascii=True)
+    freshness = (
+        "historical snapshot; freshness not checked"
+        if report.analysis_mode == "historical"
+        else f"{report.analysis_mode}; maximum evidence age {report.max_age_seconds}s"
+    )
     lines = [
         f"Maintenance preflight: {host}",
         f"Outcome: {report.outcome}",
-        f"Captured at: {data['captured_at']} (historical snapshot; freshness not checked)",
+        f"Captured at: {data['captured_at']} ({freshness})",
         f"Servers observed: {len(report.snapshot.servers)}; "
         f"inventory complete: {str(report.snapshot.servers_complete).lower()}",
         "Findings: "
@@ -54,6 +68,13 @@ def render_text(report: Report) -> str:
         "Checks run: " + ", ".join(report.checks_run),
         "",
     ]
+    if report.snapshot.collection:
+        collection = report.snapshot.collection
+        duration = (collection.completed_at - collection.started_at).total_seconds()
+        lines.append(
+            f"Collection completed: {collection.completed_at.isoformat()}; "
+            f"duration: {duration:g}s; Compute API: {collection.compute_api_version}"
+        )
     if not report.findings:
         lines.append("No known blockers in the implemented source checks.")
     for finding in report.findings:

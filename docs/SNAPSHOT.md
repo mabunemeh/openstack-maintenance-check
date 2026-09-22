@@ -1,8 +1,8 @@
-# Normalized snapshot format, version 1
+# Normalized snapshot formats, versions 1 and 2
 
 This is the tool's input contract, not a raw Nova API response. The current
-release only reads it. A future collector will normalize OpenStack evidence
-into this format or an explicitly versioned successor.
+release reads both versions. The live collector exports version 2, which adds
+collection timing and issue codes. Existing version-1 files remain readable.
 
 ```json
 {
@@ -30,7 +30,7 @@ into this format or an explicitly versioned successor.
 
 | Field | Required | Type and semantics |
 | --- | --- | --- |
-| `schema_version` | Yes | Integer 1; booleans and floating-point 1.0 are rejected |
+| `schema_version` | Yes | Integer 1 or 2; booleans and floating-point versions are rejected |
 | `captured_at` | Yes | ISO 8601 timestamp with timezone; rendered in UTC |
 | `host` | Yes | Object describing exactly one source compute service |
 | `host.name` | Yes | Non-empty compute service host name |
@@ -50,8 +50,36 @@ attribute was unavailable. This creates an unknown finding. Do not use `.get()`
 to normalize an absent API task-state attribute into a null value.
 
 `servers_complete: true` is a producer assertion. A tenant-scoped listing is not
-sufficient evidence of a complete host inventory. The offline tool cannot prove
-that assertion and says so in every report.
+sufficient evidence of a complete host inventory. The live collector sets it only
+after the all-project host listing finishes without collection issues. This is
+not an independent census of the cloud; policy and concurrent changes can affect
+visibility. An offline reader cannot independently verify this assertion.
+
+## Version 2 collection metadata
+
+Version 2 requires a `collection` object; version 1 forbids it. All other fields
+and the missing-vs-null task-state distinction are unchanged.
+
+```json
+{
+  "started_at": "2026-09-22T08:00:00+00:00",
+  "completed_at": "2026-09-22T08:00:02+00:00",
+  "compute_api_version": "2.1",
+  "issues": []
+}
+```
+
+`started_at` must equal `captured_at`, and completion must be at or after start.
+Both timestamps require timezones. `compute_api_version` records the requested
+microversion; this collector explicitly requests `2.1` and does not fall back.
+`issues` contains unique recognized codes from `models.COLLECTION_ISSUES`, never
+exception messages, URLs, or arbitrary response text. If any issues are present,
+`servers_complete` must be false. Unknown code strings are rejected.
+
+Export retains only host/server identifiers, display names, state observations,
+timestamps, API version, and issue codes. Credentials, profile names, endpoints,
+metadata, user data, addresses, and unrelated API fields are not copied. Names
+and identifiers may themselves be sensitive; allowlisting is not anonymization.
 
 ## Validation and interpretation
 
@@ -65,8 +93,10 @@ that assertion and says so in every report.
 - Malformed types, unsupported schema versions, and timestamps without timezone
   produce input error exit 3. Valid but incomplete evidence produces a report
   and exit 1. These are distinct conditions.
-- Snapshot replay is historical analysis. No maximum age is enforced in Phase 1.
-  Even a recent timestamp does not prove the evidence still matches the cloud.
+- `check` evaluates freshness by default: five minutes from `captured_at`,
+  adjustable using `--max-age-seconds`. More than 30 seconds of future clock skew
+  also produces unknown evidence. `--historical` skips freshness only; all other
+  checks still run. Demo commands explicitly use historical analysis.
 - Input order does not affect report ordering. Servers sort by ID; findings sort
   by severity (blocker, unknown, warning), resource, rule ID, and reason.
 
@@ -90,11 +120,15 @@ scheduling status. Empty inventory never overrides missing evidence.
 
 ## Output is a separate contract
 
-The JSON report uses `report_schema_version`, not `schema_version`, and cannot
+The JSON report uses `report_schema_version: 2`, not `schema_version`, and cannot
 be fed directly into `check`. It includes `task_state_known` in each normalized
 server so consumers can distinguish unavailable evidence from observed idle.
 Counts are counts of findings, not unique affected servers. A blocked report can
 also contain warnings and unknowns; the summary retains every category.
+
+Report version 2 adds `collection`, `freshness`, and explicit `analysis_mode`
+values `live`, `snapshot`, and `historical`. Version-1 report consumers must
+recognize this schema change; input version-1 compatibility is independent.
 
 Snapshots and reports can contain internal names and identifiers. Store them
 outside tracked files (for example `snapshots/` and `reports/`). The bundled
